@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tic Tac Toe – Minimax AI</title>
+
+<style>
+    body {
+        font-family: 'Segoe UI', sans-serif;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        color: #333;
+    }
+
+    .game-container {
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+        width: 330px;
+        box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+        text-align: center;
+    }
+
+    h2 {
+        margin-bottom: 5px;
+    }
+
+    .status {
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #444;
+    }
+
+    .board {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 15px;
+    }
+
+    .cell {
+        width: 90px;
+        height: 90px;
+        font-size: 42px;
+        border-radius: 10px;
+        background: #f2f2f2;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        transition: 0.2s;
+        user-select: none;
+    }
+
+    .cell:hover {
+        background: #e0e0ff;
+        transform: scale(1.05);
+    }
+
+    .cell.X {
+        color: #2196F3;
+    }
+
+    .cell.O {
+        color: #E91E63;
+    }
+
+    .win {
+        background: #c8f7c5 !important;
+    }
+
+    button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 20px;
+        background: #667eea;
+        color: white;
+        font-size: 14px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    button:hover {
+        background: #5a6fd1;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="game-container">
+    <h2>Tic Tac Toe</h2>
+    <p class="status" id="status">You (X) vs AI (O)</p>
+
+    <div class="board" id="board"></div>
+
+    <button onclick="resetGame()">Restart Game</button>
+</div>
+
+<script>
+let board = Array(9).fill("");
+let human = "X";
+let ai = "O";
+let gameOver = false;
+
+const winCombos = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+];
+
+const boardDiv = document.getElementById("board");
+const statusDiv = document.getElementById("status");
+
+// Create board UI
+for (let i = 0; i < 9; i++) {
+    let cell = document.createElement("div");
+    cell.className = "cell";
+    cell.onclick = () => humanMove(i);
+    boardDiv.appendChild(cell);
+}
+
+function humanMove(i) {
+    if (board[i] === "" && !gameOver) {
+        board[i] = human;
+        updateBoard();
+        if (!checkTerminal()) {
+            statusDiv.innerText = "AI is thinking...";
+            setTimeout(aiMove, 400); // thinking delay
+        }
+    }
+}
+
+function aiMove() {
+    let bestScore = -Infinity;
+    let move;
+
+    for (let i = 0; i < 9; i++) {
+        if (board[i] === "") {
+            board[i] = ai;
+            let score = minimax(board, 0, false);
+            board[i] = "";
+            if (score > bestScore) {
+                bestScore = score;
+                move = i;
+            }
+        }
+    }
+    board[move] = ai;
+    updateBoard();
+    checkTerminal();
+}
+
+function minimax(b, depth, isMax) {
+    let result = evaluate(b);
+    if (result !== null) return result;
+
+    if (isMax) {
+        let best = -Infinity;
+        for (let i = 0; i < 9; i++) {
+            if (b[i] === "") {
+                b[i] = ai;
+                best = Math.max(best, minimax(b, depth+1, false));
+                b[i] = "";
+            }
+        }
+        return best;
+    } else {
+        let best = Infinity;
+        for (let i = 0; i < 9; i++) {
+            if (b[i] === "") {
+                b[i] = human;
+                best = Math.min(best, minimax(b, depth+1, true));
+                b[i] = "";
+            }
+        }
+        return best;
+    }
+}
+
+function evaluate(b) {
+    for (let combo of winCombos) {
+        let [a,c,d] = combo;
+        if (b[a] && b[a] === b[c] && b[a] === b[d]) {
+            return b[a] === ai ? 10 : -10;
+        }
+    }
+    if (!b.includes("")) return 0;
+    return null;
+}
+
+function checkTerminal() {
+    let result = evaluate(board);
+    if (result !== null) {
+        gameOver = true;
+        highlightWinner();
+        if (result === 10) statusDiv.innerText = "AI Wins!";
+        else if (result === -10) statusDiv.innerText = "You Win!";
+        else statusDiv.innerText = "It's a Draw!";
+        return true;
+    }
+    statusDiv.innerText = "Your Turn (X)";
+    return false;
+}
+
+function highlightWinner() {
+    for (let combo of winCombos) {
+        let [a,c,d] = combo;
+        if (board[a] && board[a] === board[c] && board[a] === board[d]) {
+            document.getElementsByClassName("cell")[a].classList.add("win");
+            document.getElementsByClassName("cell")[c].classList.add("win");
+            document.getElementsByClassName("cell")[d].classList.add("win");
+        }
+    }
+}
+
+function updateBoard() {
+    let cells = document.getElementsByClassName("cell");
+    for (let i = 0; i < 9; i++) {
+        cells[i].innerText = board[i];
+        cells[i].classList.remove("X","O","win");
+        if (board[i]) cells[i].classList.add(board[i]);
+    }
+}
+
+function resetGame() {
+    board.fill("");
+    gameOver = false;
+    statusDiv.innerText = "You (X) vs AI (O)";
+    updateBoard();
+}
+</script>
+
+</body>
+</html>
